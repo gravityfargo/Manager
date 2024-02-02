@@ -1,6 +1,9 @@
-download Manager.py, and run it in the root folder of your vault.
+clone the repo into your vault, run installer.py
 
 ## Installation
+Packages
+- gitpython
+
 Install Plugins
   - Python Scripter
   - Dataview
