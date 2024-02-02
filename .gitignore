@@ -1,0 +1,4 @@
+config/data.json
+config/config.md
+*__pycache__/
+Templates/Button_Definitions.md
