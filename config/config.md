@@ -1,6 +1,5 @@
 ````json primary-config
 {
-	"rest-api-key": "06ea7e98a1ef3157e10908f3715ce178a8baf02bf39b62b0b83e2561a6ada94e",
 	"rest-api-url": "http://127.0.0.1:27123",
 	"index-template": "Index",
 	"templates-list": [
