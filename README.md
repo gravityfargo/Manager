@@ -3,6 +3,7 @@ clone the repo into your vault, run installer.py
 ## Installation
 Packages
 - gitpython
+- qtawesome
 
 Install Plugins
   - Python Scripter
