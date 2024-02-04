@@ -12,6 +12,7 @@ import PDF_Processor, New_Note
 class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.noteCreatorWindows = []
         self.initVars()
         self.create_dirs(self.directory_config_json, self.configs["root-dirs"], self.configs["vault_root_directory"])
         self.setWindowTitle("Obsidian Manager")
@@ -20,7 +21,9 @@ class HomeWindow(QMainWindow):
         self.layout = QVBoxLayout()
         self.centralWidget.setLayout(self.layout)
         self.setupUI()
-
+        response = self.get_request(self.configs["rest-api-url"], self.get_headers)
+        print("response")
+        
     def setupUI(self):
         self.createNoteButton = QPushButton("Create Note")
         self.createNoteButton.clicked.connect(self.launchCreateNote)
@@ -35,8 +38,9 @@ class HomeWindow(QMainWindow):
         self.layout.addWidget(self.process_pdf_button)
 
     def launchCreateNote(self):
-        self.noteCreator = New_Note.NoteCreator(self.configs, self.directory_config_json, "Create Note")
-        self.noteCreator.show()
+        noteCreator = New_Note.NoteCreator(self.configs, self.directory_config_json, "Create Note")
+        noteCreator.show()
+        self.noteCreatorWindows.append(noteCreator)
 
     def launchImportNote(self):
         self.noteImporter = New_Note.NoteCreator(self.configs, self.directory_config_json, "Import Note")
@@ -58,13 +62,13 @@ class HomeWindow(QMainWindow):
             templates_list.append(manager_directory + "Templates/" + template + ".md")
         for template in primary_config_json["templates-components-list"]:
             templates_components_list.append(manager_directory + "Templates/" + template + ".md")
-            
         self.configs = {
             "vault_root_directory": vault_root_directory,
             "manager_directory": manager_directory,
             "obsidian_config_dir": vault_root_directory + ".obsidian/",
+            "plugins_dir": vault_root_directory + ".obsidian/plugins/",
             "config_md_file": manager_directory + "config/config.md",
-            "rest-api-key": primary_config_json["rest-api-key"],
+            "rest-api-key": "",
             "rest-api-url": primary_config_json["rest-api-url"],
             "community-plugins-json": primary_config_json["rest-api-url"],
             "default-note-name": primary_config_json["default-note-name"],
@@ -72,6 +76,7 @@ class HomeWindow(QMainWindow):
             "templates-components-list": templates_components_list,
             "root-dirs": root_dirs,
         }
+        self.get_api_key(self.configs["plugins_dir"])
         self.get_headers = {
             "accept": "application/json",
             "Authorization": "Bearer 06ea7e98a1ef3157e10908f3715ce178a8baf02bf39b62b0b83e2561a6ada94e",
@@ -144,16 +149,24 @@ class HomeWindow(QMainWindow):
                         vault_root_dir + i + "/" + dir + "/" + subdir, exist_ok=True
                     )
 
+    def get_api_key(self, plugins_dir):
+        with open(f"{plugins_dir}/obsidian-local-rest-api/data.json", "r") as file:
+            data = json.load(file)
+        self.configs["rest-api-key"] = data["apiKey"]
 
     def closeEvent(self, event):
-        print("Manager cleanly closed.")
-        event.accept()
+        # Close all NoteCreator instances
+        for noteCreator in self.noteCreatorWindows:
+            noteCreator.close()
+        super().closeEvent(event)
+
+    
 def main():
     app = QApplication(sys.argv)
     mainWindow = HomeWindow()
     mainWindow.show()
     sys.exit(app.exec_())
 
+
 if __name__ == "__main__":
     main()
-

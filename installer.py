@@ -81,7 +81,6 @@ def modify_commander(plugins_dir, commander_config):
         print(f"Error reading JSON from {conf}: {e}")
     except Exception as e:
         print(f"An error occurred: {e}")
-
-        
+       
 if __name__ == "__main__":
     main()

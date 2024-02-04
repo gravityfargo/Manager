@@ -20,6 +20,8 @@ import qtawesome as qta
 class NoteCreator(QWidget):
     def __init__(self, configs, directory_config_json, action):
         super().__init__()
+        self.subprocesses = []  # Initialize a list to track child processes
+
         self.action = action
         self.layout = QHBoxLayout()
         self.current_date = datetime.now().strftime("%Y-%m-%d")
@@ -36,16 +38,16 @@ class NoteCreator(QWidget):
             self.populate_form(target_file_path, target_file_name)
 
     def initVars(self):
+        self.notename_parts = {
+            "date": "",
+            "note_name": self.configs["default-note-name"]
+        }
         self.filename_parts = {
             "root": "",
             "directory": "",
             "subfolder": "",
             "optional_subdir": "",
             "note_name":  self.notename_parts
-        }
-        self.notename_parts = {
-            "date": "",
-            "note_name": self.configs["default-note-name"]
         }
 
     def setup_ui(self):
@@ -362,9 +364,10 @@ class NoteCreator(QWidget):
             widget = item.widget()
             textEditText = widget.findChild(QTextEdit)
             new_file_content += f"{textEditText.toPlainText()}\n"
-        # self.rebuildStringWithDate(sanitized_filename)
-        # os.makedirs(self.dest_path, exist_ok=True)
         with open(self.filename_lineedit.text(), "w", encoding="utf-8") as md_file:
             md_file.write(new_file_content)
 
         self.close()
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
