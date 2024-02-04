@@ -1,7 +1,6 @@
 clone the repo into your vault, run installer.py
-
 systemwide python venv requred
-
+be sure to enable both js queries in dataview
 Install Plugins
   - Python Scripter
   - Dataview

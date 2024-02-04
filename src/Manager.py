@@ -5,16 +5,15 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QApplication,
-    QMainWindow,
-    QMessageBox
+    QMainWindow
 )
-from datetime import datetime
 import PDF_Processor, New_Note
 
 class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initVars()
+        self.create_dirs(self.directory_config_json, self.configs["root-dirs"], self.configs["vault_root_directory"])
         self.setWindowTitle("Obsidian Manager")
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
@@ -23,12 +22,10 @@ class HomeWindow(QMainWindow):
         self.setupUI()
 
     def setupUI(self):
-        # Create Note Button
         self.createNoteButton = QPushButton("Create Note")
         self.createNoteButton.clicked.connect(self.launchCreateNote)
         self.layout.addWidget(self.createNoteButton)
         
-        # Import Note Button
         self.importNoteButton = QPushButton("Import Note")
         self.importNoteButton.clicked.connect(self.launchImportNote)
         self.layout.addWidget(self.importNoteButton)
@@ -137,12 +134,12 @@ class HomeWindow(QMainWindow):
             root_dirs.append(i)
         return root_dirs
 
-    def create_dirs(self, json_data, root_dirs, vault_root_dir):
+    def create_dirs(self, directory_config_json, root_dirs, vault_root_dir):
         for i in root_dirs:
             os.makedirs(vault_root_dir + i, exist_ok=True)
-            for dir in json_data[i]["directories"]:
+            for dir in directory_config_json[i]["directories"]:
                 os.makedirs(vault_root_dir + i + "/" + dir, exist_ok=True)
-                for subdir in json_data[i]["directories"][dir]:
+                for subdir in directory_config_json[i]["directories"][dir]:
                     os.makedirs(
                         vault_root_dir + i + "/" + dir + "/" + subdir, exist_ok=True
                     )

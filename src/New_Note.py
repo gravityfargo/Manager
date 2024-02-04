@@ -6,7 +6,6 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QPushButton,
     QCheckBox,
-    QApplication,
     QSpacerItem,
     QSizePolicy,
     QHBoxLayout,
@@ -16,7 +15,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QFontMetrics
 from datetime import datetime
 import qtawesome as qta
-import os
 
 
 class NoteCreator(QWidget):
@@ -43,6 +41,10 @@ class NoteCreator(QWidget):
             "directory": "",
             "subfolder": "",
             "optional_subdir": "",
+            "note_name":  self.notename_parts
+        }
+        self.notename_parts = {
+            "date": "",
             "note_name": self.configs["default-note-name"]
         }
 
@@ -50,7 +52,7 @@ class NoteCreator(QWidget):
         self.widget_left = QWidget()
         self.widget_left.setMinimumWidth(500)
         self.widget_right = QWidget()
-        self.widget_right.setMinimumWidth(1400)
+        self.widget_right.setMinimumWidth(900)
 
         self.layout_left = QVBoxLayout()
         self.layout_right = QVBoxLayout()
@@ -79,7 +81,7 @@ class NoteCreator(QWidget):
         spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.layout_left.addItem(spacer)
         self.layout_right.addItem(spacer)
-        
+        self.setup_filename_checkboxes()
         self.setup_filename_lineedit()
 
         self.create_button = QPushButton("Create Note")
@@ -171,6 +173,16 @@ class NoteCreator(QWidget):
         self.layout_left.addWidget(self.optional_subdir_input)
         self.optional_subdir_input.textChanged.connect(self.optional_subdir_input_text_changed)
 
+    def setup_filename_checkboxes(self):
+        hbox = QHBoxLayout()
+        widget = QWidget()
+        checkbox = QCheckBox("Current Date")
+        checkbox.stateChanged.connect(self.show_text_widget)
+        self.current_date
+        hbox.addWidget(checkbox)
+        widget.setLayout(hbox)
+        self.layout_right.addWidget(widget)
+        
     def setup_filename_lineedit(self):
         self.filename_lineedit_label = QLabel("Name of File:")
         self.filename_lineedit = QLineEdit()
