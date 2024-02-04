@@ -21,8 +21,6 @@ class HomeWindow(QMainWindow):
         self.layout = QVBoxLayout()
         self.centralWidget.setLayout(self.layout)
         self.setupUI()
-        response = self.get_request(self.configs["rest-api-url"], self.get_headers)
-        print("response")
         
     def setupUI(self):
         self.createNoteButton = QPushButton("Create Note")
@@ -39,8 +37,12 @@ class HomeWindow(QMainWindow):
 
     def launchCreateNote(self):
         noteCreator = New_Note.NoteCreator(self.configs, self.directory_config_json, "Create Note")
+        noteCreator.dataSent.connect(self.handleNoteCreatorData)  # Connect signal to slot
         noteCreator.show()
         self.noteCreatorWindows.append(noteCreator)
+
+    def handleNoteCreatorData(self, data):
+        print("Data received from NoteCreator:", data)
 
     def launchImportNote(self):
         self.noteImporter = New_Note.NoteCreator(self.configs, self.directory_config_json, "Import Note")
@@ -77,11 +79,17 @@ class HomeWindow(QMainWindow):
             "root-dirs": root_dirs,
         }
         self.get_api_key(self.configs["plugins_dir"])
+        authorization = "Bearer " + self.configs["rest-api-key"]
         self.get_headers = {
             "accept": "application/json",
-            "Authorization": "Bearer 06ea7e98a1ef3157e10908f3715ce178a8baf02bf39b62b0b83e2561a6ada94e",
+            "Authorization": authorization,
         }
         self.post_headers = {"Content-Type": "application/json"}
+        
+        self.put_new_note_headers = {
+            "accept": "application/json",
+            "Content-Type": "text/markdown"
+        }
 
     def get_request(self, url, headers=None, params=None):
         try:

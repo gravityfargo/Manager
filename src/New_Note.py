@@ -13,11 +13,13 @@ from PyQt5.QtWidgets import (
     QFileDialog    
 )
 from PyQt5.QtGui import QFontMetrics
+from PyQt5.QtCore import pyqtSignal
 from datetime import datetime
 import qtawesome as qta
 
 
 class NoteCreator(QWidget):
+    dataSent = pyqtSignal(dict)
     def __init__(self, configs, directory_config_json, action):
         super().__init__()
         self.subprocesses = []  # Initialize a list to track child processes
@@ -29,14 +31,15 @@ class NoteCreator(QWidget):
         self.directory_config_json = directory_config_json
         self.chosen_optional_folder_name = ""
         self.initVars()
-        
+
+
         if self.action == "Create Note":
             self.setup_ui()
         elif self.action == "Import Note": 
             target_file_path, target_file_name = self.pick_file_to_import()
             self.setup_ui()
             self.populate_form(target_file_path, target_file_name)
-
+        
     def initVars(self):
         self.notename_parts = {
             "date": "",
@@ -358,6 +361,7 @@ class NoteCreator(QWidget):
         self.rebuilt_header_string = new_string
 
     def _on_create_button_clicked(self):
+        self.dataSent.emit({'key': 'Test value from NoteCreator'})
         new_file_content = ""
         for i in range(self.layout_right_textboxes.count()):
             item = self.layout_right_textboxes.itemAt(i)
