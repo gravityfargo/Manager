@@ -1,4 +1,4 @@
-import os, json, subprocess
+import os, json
 
 
 def main():
@@ -11,7 +11,7 @@ def main():
     plugins_dir = f"{obsidian_dir}/plugins"
     executable_dir = f"{scripts_dir}/Manager"
     community_plugins_config = f"{obsidian_dir}/community-plugins.json"
-    visible_executable_dir = f"{vault_dir}Manager/Manager"
+    visible_executable_dir = f"{vault_dir}Manager"
     
     required_plugins = [
         "templater-obsidian",
@@ -42,9 +42,9 @@ def checkForPlugins(community_plugins_config, required_plugins):
         if all_exist:
             print("Plugins are present")
         else:
-            print("Required plugins are not installed and or enabled.")
+            raise Exception("Required plugins are not installed and or enabled.")
     else:
-        print("Required plugins are not installed and or enabled.")
+        raise Exception("Required plugins are not installed and or enabled.")
 
 def links_setup(executable_dir, visible_executable_dir):
     os.makedirs(executable_dir, exist_ok=True)
@@ -70,7 +70,7 @@ def modify_commander(plugins_dir, commander_config):
         if "leftRibbon" in data:
             data["leftRibbon"].append(commander_config)
         else:
-            print(f'"leftRibbon" key not found in {conf}')
+            raise Exception(f'"leftRibbon" key not found in {conf}')
         
         # Write the modified data back to the file
         with open(conf, 'w', encoding='utf-8') as file:
