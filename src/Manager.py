@@ -5,8 +5,10 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QApplication,
-    QMainWindow
+    QMainWindow,
+    QMessageBox
 )
+from datetime import datetime
 import PDF_Processor, New_Note
 
 class HomeWindow(QMainWindow):
@@ -146,12 +148,12 @@ class HomeWindow(QMainWindow):
                     )
 
 
+    def closeEvent(self, event):
+        print("Manager cleanly closed.")
+        event.accept()
 def main():
     app = QApplication(sys.argv)
-    font = app.font()
     mainWindow = HomeWindow()
-    font.setPointSize(font.pointSize() + 2)
-    app.setFont(font)
     mainWindow.show()
     sys.exit(app.exec_())
 

@@ -1,4 +1,3 @@
-from dataclasses import replace
 from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,

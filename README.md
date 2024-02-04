@@ -1,9 +1,6 @@
 clone the repo into your vault, run installer.py
 
-## Installation
-Packages
-- gitpython
-- qtawesome
+systemwide python venv requred
 
 Install Plugins
   - Python Scripter
@@ -11,6 +8,7 @@ Install Plugins
   - Templater
   - Quickadd
   - Local REST API
+  - Commander
 
 ## Directories
 /Obsidian/
