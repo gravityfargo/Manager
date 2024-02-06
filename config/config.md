@@ -2,12 +2,12 @@
 {
 	"rest-api-url": "http://127.0.0.1:27123",
 	"index-template": "Index",
-	"templates-list": [
+	"templates-components-list": [
 		"Default_Contents", 
 		"Default_Header", 
 		"Quicklinks"
 		],
-	"templates-components-list": [
+	"templates-list": [
 		"Index_Template", 
 		"Notes_Template"
 		],
@@ -19,7 +19,7 @@ primary-config```
 {
 	"Courses": {
 		"naming": {
-			"Course": ["tabs"]
+			"Course": "tab"
 		},
 		"directories": {
 			"ECE214": [

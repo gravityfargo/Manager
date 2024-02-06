@@ -66,21 +66,35 @@ def modify_commander(plugins_dir, commander_config):
         with open(conf, 'r', encoding='utf-8') as file:
             data = json.load(file)
         
-        # Insert the new object into "leftRibbon"
         if "leftRibbon" in data:
             data["leftRibbon"].append(commander_config)
-        else:
-            raise Exception(f'"leftRibbon" key not found in {conf}')
         
-        # Write the modified data back to the file
         with open(conf, 'w', encoding='utf-8') as file:
             json.dump(data, file, indent=4, ensure_ascii=False)
         
-        print(f'Object inserted successfully into "leftRibbon" in {conf}')
+        print("Launch icon added to the left ribbon.")
     except json.JSONDecodeError as e:
         print(f"Error reading JSON from {conf}: {e}")
     except Exception as e:
         print(f"An error occurred: {e}")
-       
+   
+def modify_rest_api(plugins_dir):
+    try:
+        conf = f"{plugins_dir}/obsidian-local-rest-api/data.json"
+        with open(conf, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+
+        data["enableInsecureServer"] = True
+        
+        with open(conf, 'w', encoding='utf-8') as file:
+            json.dump(data, file, indent=4, ensure_ascii=False)
+        
+        print("REST API Insecure Server Enabled")
+    except json.JSONDecodeError as e:
+        print(f"Error reading JSON from {conf}: {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+ 
+     
 if __name__ == "__main__":
     main()

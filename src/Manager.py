@@ -37,12 +37,17 @@ class HomeWindow(QMainWindow):
 
     def launchCreateNote(self):
         noteCreator = New_Note.NoteCreator(self.configs, self.directory_config_json, "Create Note")
-        noteCreator.dataSent.connect(self.handleNoteCreatorData)  # Connect signal to slot
+        noteCreator.dataSent.connect(self.handleNoteCreatorData)
         noteCreator.show()
         self.noteCreatorWindows.append(noteCreator)
 
     def handleNoteCreatorData(self, data):
-        print("Data received from NoteCreator:", data)
+        if data["type"] == "new_note":
+            data["prefix"] = "/vault"
+            self.put_request(data, self.put_new_note_headers)
+            data["prefix"] = "/open"
+            data["content"] = ""
+            self.post_request(data, self.post_headers)
 
     def launchImportNote(self):
         self.noteImporter = New_Note.NoteCreator(self.configs, self.directory_config_json, "Import Note")
@@ -78,17 +83,22 @@ class HomeWindow(QMainWindow):
             "templates-components-list": templates_components_list,
             "root-dirs": root_dirs,
         }
-        self.get_api_key(self.configs["plugins_dir"])
+        self.get_api_key()
         authorization = "Bearer " + self.configs["rest-api-key"]
         self.get_headers = {
             "accept": "application/json",
-            "Authorization": authorization,
+            "Authorization": authorization
         }
-        self.post_headers = {"Content-Type": "application/json"}
+        self.post_headers = {
+            "Content-Type": "application/json",
+            "accept": "*/*",
+            "Authorization": authorization
+            }
         
         self.put_new_note_headers = {
             "accept": "application/json",
-            "Content-Type": "text/markdown"
+            "Content-Type": "text/markdown",
+            "Authorization": authorization
         }
 
     def get_request(self, url, headers=None, params=None):
@@ -100,14 +110,23 @@ class HomeWindow(QMainWindow):
             print(f"An error occurred: {e}")
             return None
 
-    def post_request(self, url, data, headers=None):
+    def post_request(self, data, headers):
         try:
-            response = requests.post(url, data=data, headers=headers)
+            url = self.configs["rest-api-url"] + data["prefix"] + data["filename"]
+            data = data["content"]
+            response = requests.post(url, data=data, headers=headers, verify=False)
             response.raise_for_status()
-            return response.json()  # Assuming response is in JSON format
         except requests.RequestException as e:
             print(f"An error occurred: {e}")
-            return None
+
+    def put_request(self, data, headers):
+        try:
+            url = self.configs["rest-api-url"] + data["prefix"] + data["filename"]
+            data = data["content"]
+            response = requests.put(url, data=data, headers=headers, verify=False)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            print(f"An error occurred: {e}")
 
     def get_vault_path(self):
         manager_dir_raw = os.path.dirname(os.path.realpath(__file__))
@@ -157,7 +176,8 @@ class HomeWindow(QMainWindow):
                         vault_root_dir + i + "/" + dir + "/" + subdir, exist_ok=True
                     )
 
-    def get_api_key(self, plugins_dir):
+    def get_api_key(self):
+        plugins_dir = self.configs["plugins_dir"]
         with open(f"{plugins_dir}/obsidian-local-rest-api/data.json", "r") as file:
             data = json.load(file)
         self.configs["rest-api-key"] = data["apiKey"]
