@@ -43,9 +43,10 @@ class Note_Processor(QWidget):
             self.populate_form(target_file_path, target_file_name)
 
     def initVars(self):
+        self.default_note_name = self.configs["default-note-name"].replace(".md", "")
         self.notename_parts = {
             "date": "",
-            "note_name": self.configs["default-note-name"].replace(".md", ""),
+            "note_name": self.default_note_name
         }
         self.filename_parts = {
             "root": "",
@@ -400,6 +401,17 @@ class Note_Processor(QWidget):
 
     def triggered_root_folder_index_changed(self, index):
         self.chosen_root_folder = self.root_combo.currentText()
+        for key, value in self.filename_parts.items():
+            if key == "note_name":
+                self.filename_parts[key] = self.default_note_name
+            else:
+                value = ""
+        for key, value in self.notename_parts.items():
+            if key == "note_name":
+                self.notename_parts[key] = self.default_note_name
+            else:
+                value = ""
+                        
         self.filename_parts["root"] = self.chosen_root_folder
         self.triggered_final_path_label_edited()
         self.populate_combo(
@@ -471,13 +483,10 @@ class Note_Processor(QWidget):
         self.triggered_final_path_label_edited()
 
     def triggered_filename_macro_checkboxes(self):
-        print("\n")
         if self.checkbox_date.isChecked():
             self.notename_parts["date"] = self.current_date
-            print("Checked")
         else:
             self.notename_parts["date"] = ""
-            print("Unchecked")
         
         self.filename_lineedit.textChanged.disconnect(self.triggered_filename_lineedit_edited)
 
@@ -487,10 +496,10 @@ class Note_Processor(QWidget):
         self.triggered_final_path_label_edited()
         self.filename_lineedit.textChanged.connect(self.triggered_filename_lineedit_edited)
 
-        print(f"notename: {self.notename_parts['note_name']}")
-        print(f"filename: {self.filename_parts['note_name']}")
-        print(f"lineedit: {self.filename_lineedit.text()}")
-        print(f"label: {self.final_path_label.text()}")
+        # print(f"notename: {self.notename_parts['note_name']}")
+        # print(f"filename: {self.filename_parts['note_name']}")
+        # print(f"lineedit: {self.filename_lineedit.text()}")
+        # print(f"label: {self.final_path_label.text()}")
 
     def find_text_widget(self, widget_name):
         # print(f"self.layout_right_textboxes.count(): {self.layout_right_textboxes.count()}")
