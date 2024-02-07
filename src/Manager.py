@@ -8,95 +8,79 @@ from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
 )
-import PDF_Processor, New_Note
+import PDF_Processor, Note_Processor
 
 
-class HomeWindow(QMainWindow):
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.noteCreatorWindows = []
-        self.initVars()
-        self.create_dirs(
-            self.directory_config_json,
-            self.configs["root-dirs"],
-            self.configs["vault_root_directory"],
-        )
-        self.create_indexes(
-            self.directory_config_json,
-            self.configs["root-dirs"],
-            self.configs["vault_root_directory"],
-            self.templates,
-        )
-        self.setWindowTitle("Obsidian Manager")
-        self.centralWidget = QWidget()
-        self.setCentralWidget(self.centralWidget)
-        self.layout = QVBoxLayout()
-        self.centralWidget.setLayout(self.layout)
-        self.setupUI()
-
+        self.note_windows = []
+        self.init_vars()
+        self.setup_ui()
         self.index_directory()
 
-    def setupUI(self):
-        self.createNoteButton = QPushButton("Create Note")
-        self.createNoteButton.clicked.connect(self.launchCreateNote)
-        self.layout.addWidget(self.createNoteButton)
+    def setup_ui(self):
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        layout = QVBoxLayout()
+        self.central_widget.setLayout(layout)
 
-        self.importNoteButton = QPushButton("Import Note")
-        self.importNoteButton.clicked.connect(self.launchImportNote)
-        self.layout.addWidget(self.importNoteButton)
+        create_btn = QPushButton("Create Note")
+        create_btn.clicked.connect(self.create_note)
+        layout.addWidget(create_btn)
 
-        self.process_pdf_button = QPushButton("Process PDF")
-        # self.process_pdf_button.clicked.connect(self.launchProcessPDF)
-        self.layout.addWidget(self.process_pdf_button)
+        import_btn = QPushButton("Import Note")
+        import_btn.clicked.connect(self.import_note)
+        layout.addWidget(import_btn)
 
-    def launchCreateNote(self):
-        noteCreator = New_Note.NoteCreator(
-            self.configs, self.directory_config_json, self.templates, "Create Note"
+        process_pdf_btn = QPushButton("Process PDF")
+        layout.addWidget(process_pdf_btn)
+
+    def create_note(self):
+        creator = Note_Processor.Note_Processor(
+            self.configs, self.dir_config_json, self.templates, "Create Note"
         )
-        noteCreator.dataSent.connect(self.handleNoteCreatorData)
-        noteCreator.show()
-        self.noteCreatorWindows.append(noteCreator)
+        creator.data_sent.connect(self.handle_data)
+        creator.show()
+        self.note_windows.append(creator)
 
-    def handleNoteCreatorData(self, data):
+    def handle_data(self, data):
         if data["type"] == "new_note":
             data["prefix"] = "/vault"
-            self.put_request(data, self.put_new_note_headers)
+            self.put_request(data)
             data["prefix"] = "/open"
             data["content"] = ""
-            self.post_request(data, self.post_headers)
+            self.post_request(data)
 
-    def launchImportNote(self):
-        self.noteImporter = New_Note.NoteCreator(
-            self.configs, self.directory_config_json, "Import Note"
+    def import_note(self):
+        importer = Note_Processor.Note_Processor(
+            self.configs, self.dir_config, "Import Note"
         )
-        self.noteImporter.show()
+        importer.data_sent.connect(self.handle_data)
+        importer.show()
+        self.note_windows.append(importer)
 
-    def initVars(self):
-        manager_directory, vault_root_directory = self.get_vault_path()
-        # /home/nathan/TEMPVAULT/Manager/
-        # /home/nathan/TEMPVAULT/
-        (
-            primary_config_json,
-            self.directory_config_json,
-            self.default_inline_meta_json,
-        ) = self.parse_data_from_md(manager_directory + "config/config.md")
+    def init_vars(self):
+        manager_dir, vault_root_dir = self.get_vault_path()
+        config_json, self.dir_config_json = self.parse_data_from_md(manager_dir + "config/config.md")
+        root_dirs = self.index_json_dirs(self.dir_config_json)
+        self.templates = self.get_templates(manager_dir)
 
-        root_dirs = self.index_json_dirs(self.directory_config_json)
-        # ['Courses', 'Linux Reference']
-        self.templates = self.get_templates(manager_directory)
+        self.create_dirs(self.dir_config_json, root_dirs, vault_root_dir)
+        self.create_indexes(self.dir_config_json, root_dirs, vault_root_dir, self.templates)
 
-        self.output_json_file = manager_directory + "directory_index.json"
+        self.output_json_file = manager_dir + "directory_index.json"
 
         self.configs = {
-            "vault_root_directory": vault_root_directory,
-            "manager_directory": manager_directory,
-            "obsidian_config_dir": vault_root_directory + ".obsidian/",
-            "plugins_dir": vault_root_directory + ".obsidian/plugins/",
-            "config_md_file": manager_directory + "config/config.md",
+            "vault_root_dir": vault_root_dir,
+            "manager_dir": manager_dir,
+            "obsidian_config_dir": vault_root_dir + ".obsidian/",
+            "plugins_dir": vault_root_dir + ".obsidian/plugins/",
+            "config_md_file": manager_dir + "config/config.md",
             "rest-api-key": "",
-            "rest-api-url": primary_config_json["rest-api-url"],
-            "community-plugins-json": primary_config_json["rest-api-url"],
-            "default-note-name": primary_config_json["default-note-name"],
+            "rest-api-url": config_json["rest-api-url"],
+            "community-plugins-json": config_json["rest-api-url"],
+            "default-note-name": config_json["default-note-name"],
             "root-dirs": root_dirs,
         }
         self.get_api_key()
@@ -148,11 +132,11 @@ class HomeWindow(QMainWindow):
     def get_vault_path(self):
         manager_dir_raw = os.path.dirname(os.path.realpath(__file__))
         manager_dir_split = manager_dir_raw.split("/")
-        manager_directory = manager_dir_raw.replace(manager_dir_split[-1], "")
-        vault_root_directory = manager_directory.replace(
+        manager_dir = manager_dir_raw.replace(manager_dir_split[-1], "")
+        vault_root_dir = manager_dir.replace(
             manager_dir_split[-2], ""
         ).replace("//", "/")
-        return manager_directory, vault_root_directory
+        return manager_dir, vault_root_dir
 
     def parse_data_from_md(self, md_file_path):
         with open(md_file_path, "r", encoding="utf-8") as md_file:
@@ -161,7 +145,7 @@ class HomeWindow(QMainWindow):
         start = content.find("```json primary-config") + len("```json primary-config")
         end = content.find("primary-config```", start)
         json_str = content[start:end].strip()
-        primary_config_json = json.loads(json_str)
+        config_json = json.loads(json_str)
 
         start = content.find("```json directory-config") + len(
             "```json directory-config"
@@ -170,12 +154,7 @@ class HomeWindow(QMainWindow):
         json_str = content[start:end].strip()
         directory_config_json = json.loads(json_str)
 
-        start = content.find("```markdown default-inline-meta") + len(
-            "```markdown default-inline-meta"
-        )
-        end = content.find("default-inline-meta```", start)
-        default_inline_meta_json = content[start:end].strip()
-        return primary_config_json, directory_config_json, default_inline_meta_json
+        return config_json, directory_config_json
 
     def index_json_dirs(self, json_data):
         root_dirs = []
@@ -183,21 +162,19 @@ class HomeWindow(QMainWindow):
             root_dirs.append(i)
         return root_dirs
 
-    def create_dirs(self, directory_config_json, root_dirs, vault_root_dir):
+    def create_dirs(self, dir_config_json, root_dirs, vault_root_dir):
         for i in root_dirs:
             os.makedirs(vault_root_dir + i, exist_ok=True)
-            for dir in directory_config_json[i]["directories"]:
+            for dir in dir_config_json[i]["directories"]:
                 os.makedirs(vault_root_dir + i + "/" + dir, exist_ok=True)
-                for subdir in directory_config_json[i]["directories"][dir]:
+                for subdir in dir_config_json[i]["directories"][dir]:
                     os.makedirs(
                         vault_root_dir + i + "/" + dir + "/" + subdir, exist_ok=True
                     )
 
     def create_indexes(self, directory_config, root_dirs, vault_root, templates):
-        # Ensure paths end with a slash
         vault_root = os.path.join(vault_root, "")
 
-        # Primary Index
         primary_index_template_path = os.path.join(
             templates["templates-required"]["directory"],
             templates["templates-required"]["names"][0],
@@ -205,7 +182,6 @@ class HomeWindow(QMainWindow):
         primary_index_dest_path = os.path.join(vault_root, "Index.md")
         shutil.copyfile(primary_index_template_path, primary_index_dest_path)
 
-        # Secondary Indexes
         for root_dir in root_dirs:
             secondary_index_template_path = os.path.join(
                 templates["templates-required"]["directory"],
@@ -215,7 +191,6 @@ class HomeWindow(QMainWindow):
             os.makedirs(os.path.dirname(secondary_index_dest_path), exist_ok=True)
             shutil.copyfile(secondary_index_template_path, secondary_index_dest_path)
 
-            # Tertiary Indexes (Directly within each course directory)
             if root_dir in directory_config:
                 for directory in directory_config[root_dir]["directories"]:
                     tertiary_index_template_path = os.path.join(
@@ -232,7 +207,6 @@ class HomeWindow(QMainWindow):
                         tertiary_index_template_path, tertiary_index_dest_path
                     )
 
-                    # For each sub-directory within each course directory
                     for subdir in directory_config[root_dir]["directories"][directory]:
                         tertiary_index_dest_subdir_path = os.path.join(
                             vault_root, root_dir, directory, subdir, "Index.md"
@@ -247,7 +221,7 @@ class HomeWindow(QMainWindow):
                         )
 
     def index_directory(self):
-        path = self.configs["vault_root_directory"]
+        path = self.configs["vault_root_dir"]
         directory_index = {}
         for root, dirs, files in os.walk(path, topdown=True):
 
@@ -307,26 +281,25 @@ class HomeWindow(QMainWindow):
 
         for template_type in templates.values():
             directory_path = template_type["directory"]
-            if os.path.isdir(directory_path):  # Check if the directory exists
+            if os.path.isdir(directory_path):
                 for filename in os.listdir(directory_path):
                     file_path = os.path.join(directory_path, filename)
                     if os.path.isfile(
                         file_path
-                    ):  # Make sure it's a file, not a directory
+                    ):
                         template_type["names"].append(filename)
 
         return templates
 
     def closeEvent(self, event):
-        # Close all NoteCreator instances
-        for noteCreator in self.noteCreatorWindows:
-            noteCreator.close()
+        for window in self.note_windows:
+            window.close()
         super().closeEvent(event)
 
 
 def main():
     app = QApplication(sys.argv)
-    mainWindow = HomeWindow()
+    mainWindow = MainWindow()
     mainWindow.show()
     sys.exit(app.exec_())
 

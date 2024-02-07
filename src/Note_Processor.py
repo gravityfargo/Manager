@@ -20,8 +20,8 @@ import qtawesome as qta
 import os
 
 
-class NoteCreator(QWidget):
-    dataSent = pyqtSignal(dict)
+class Note_Processor(QWidget):
+    data_sent = pyqtSignal(dict)
 
     def __init__(self, configs, directory_config_json, templates, action):
         super().__init__()
@@ -531,7 +531,7 @@ class NoteCreator(QWidget):
             "filename": "/" + self.final_path_label.text(),
             "content": new_file_content,
         }
-        self.dataSent.emit(api_put_data)
+        self.data_sent.emit(api_put_data)
         self.close()
 
     def closeEvent(self, event):
