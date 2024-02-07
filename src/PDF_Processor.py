@@ -40,7 +40,7 @@ class PDFProcessor(QWidget):
                     md_file_path = os.path.splitext(new_pdf_path)[0] + ".md"
                     shutil.move(self.selected_pdf, new_pdf_path)
                     with open(md_file_path, "w") as md_file:
-                        md_file.write(f'---\nannotation-target: "{base_name}"\n---\n')
+                        md_file.write(f'---\nannotation-target: "[[{base_name}]]"\n---\n')
                     print("PDF processed and MD file created successfully.")
                 except Exception as e:
                     print(f"Error processing PDF: {e}")
