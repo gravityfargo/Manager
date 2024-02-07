@@ -1,4 +1,5 @@
 import sys, json, os, requests
+from tkinter import N
 import shutil
 from PyQt5.QtWidgets import (
     QApplication,
@@ -34,6 +35,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(import_btn)
 
         process_pdf_btn = QPushButton("Process PDF")
+        process_pdf_btn.clicked.connect(self.import_pdf)
         layout.addWidget(process_pdf_btn)
 
     def create_note(self):
@@ -47,18 +49,24 @@ class MainWindow(QMainWindow):
     def handle_data(self, data):
         if data["type"] == "new_note":
             data["prefix"] = "/vault"
-            self.put_request(data)
+            self.put_request(data, self.put_new_note_headers)
             data["prefix"] = "/open"
             data["content"] = ""
-            self.post_request(data)
+            self.post_request(data, self.post_headers)
 
     def import_note(self):
         importer = Note_Processor.Note_Processor(
-            self.configs, self.dir_config, "Import Note"
+            self.configs, self.dir_config_json, self.templates, "Import Note"
         )
         importer.data_sent.connect(self.handle_data)
         importer.show()
         self.note_windows.append(importer)
+
+    def import_pdf(self):
+        pdf_importer = PDF_Processor.PDFProcessor(self.configs)
+        pdf_importer.data_sent.connect(self.handle_data)
+        pdf_importer.show()
+        self.note_windows.append(pdf_importer)
 
     def init_vars(self):
         manager_dir, vault_root_dir = self.get_vault_path()
@@ -85,8 +93,7 @@ class MainWindow(QMainWindow):
         }
         self.get_api_key()
         authorization = "Bearer " + self.configs["rest-api-key"]
-        self.get_headers = {
-            "accept": "application/json",
+        self.auth_headers = {
             "Authorization": authorization,
         }
         self.post_headers = {
@@ -119,7 +126,7 @@ class MainWindow(QMainWindow):
         except requests.RequestException as e:
             print(f"An error occurred: {e}")
 
-    def put_request(self, data, headers):
+    def put_request(self, data, headers=None):
         try:
             url = self.configs["rest-api-url"] + data["prefix"] + data["filename"]
             data = data["content"]

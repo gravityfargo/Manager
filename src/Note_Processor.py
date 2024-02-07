@@ -150,12 +150,18 @@ class Note_Processor(QWidget):
         properties_values.pop(4)
         properties_values.pop(3)
         properties_values.pop(0)
-        properties_keys.append("created ")
-        properties_keys.append("modified")
-        properties_values.append('$= `dv.current().file.ctime.toFormat("f")`')
-        properties_values.append('`$= dv.current().file.mtime.toFormat("f")`')
+        properties_keys.append("created")
+        properties_values.append(self.current_date)
+        properties_keys.append("root")  
+        properties_values.append(self.filename_parts["root"])
+        properties_keys.append("parent")
+        path_split = self.final_path_label.text().split("/")
+        path = self.final_path_label.text().replace(path_split[-1], "")
+        path_formatted = f"[[{path}Index]]"
+        properties_values.append(path_formatted)
+
+        print(f"{properties_keys}\n{properties_values}")
         properties_dict = dict(zip(properties_keys, properties_values))
-            
         content += "%%\n"
         for key, value in properties_dict.items():
             if key != "note_name":
@@ -177,7 +183,7 @@ class Note_Processor(QWidget):
     def pick_file_to_import(self):
         target_file_path, _ = QFileDialog.getOpenFileName(
             caption="Select Note to Import",
-            directory=self.configs["vault_root_directory"],
+            directory=self.configs["vault_root_dir"],
             filter="Markdown Files (*.md *.markdown)",
         )
         i = target_file_path.split("/")
@@ -453,7 +459,7 @@ class Note_Processor(QWidget):
                 new_filename += f"/{value}"
         self.final_path_label.setText(new_filename.replace(" ", "_") + ".md")
 
-        if os.path.isfile(new_filename.replace(" ", "_") + ".md"):
+        if os.path.isfile(self.final_path_label.text()):
             self.warning_label.setText("Warning! File exists!")
         else:
             self.warning_label.setText("")

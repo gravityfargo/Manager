@@ -14,6 +14,7 @@ primary-config```
 		"directories": {
 			"ECE214": [
 				"Notes",
+				"Unprocessed Notes",
 				"Course Resources",
 				"Homework",
 				"Labs",
@@ -21,6 +22,7 @@ primary-config```
 			],
 			"ECE271": [
 				"Notes",
+				"Unprocessed Notes",
 				"Course Resources",
 				"Homework",
 				"Labs",
@@ -28,6 +30,7 @@ primary-config```
 			],
 			"ECE331": [
 				"Notes",
+				"Unprocessed Notes",
 				"Course Resources",
 				"Homework",
 				"Projects",
