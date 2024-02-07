@@ -40,12 +40,22 @@ primary-config```
 	},
 	"Linux Reference": {
 		"naming": {
-			"category": ["programs"]
+			"category": "tab"
 		},
 		"directories": {
 			"networking": ["netplan"],
 			"System Manager": ["systemd", "initd"],
 			"Resource Manager": ["cgroups"]
+		}
+	},
+	"ARCSIM": {
+		"naming": {
+			"Category": "programs"
+		},
+		"directories": {
+			"Slurm": [""],
+			"Munge": [""],
+			"Infiniband": [""]
 		}
 	}
 }
