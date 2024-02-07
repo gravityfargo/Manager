@@ -23,10 +23,11 @@ import os
 class NoteCreator(QWidget):
     dataSent = pyqtSignal(dict)
 
-    def __init__(self, configs, directory_config_json, action):
+    def __init__(self, configs, directory_config_json, templates, action):
         super().__init__()
         self.subprocesses = []  # Initialize a list to track child processes
         self.action = action
+        self.templates = templates
         self.layout = QHBoxLayout()
         self.current_date = f"{datetime.now().strftime('%Y-%m-%d')} "
         self.configs = configs
@@ -37,21 +38,21 @@ class NoteCreator(QWidget):
         if self.action == "Create Note":
             self.setup_ui()
         elif self.action == "Import Note":
-            target_file_path, target_file_name = self.pick_file_to_import()
             self.setup_ui()
+            target_file_path, target_file_name = self.pick_file_to_import()
             self.populate_form(target_file_path, target_file_name)
 
     def initVars(self):
         self.notename_parts = {
-            "date": "asdasd",
-            "note_name": self.configs["default-note-name"],
+            "date": "",
+            "note_name": self.configs["default-note-name"].replace(".md", ""),
         }
         self.filename_parts = {
             "root": "",
             "directory": "",
             "subfolder": "",
             "optional_subdir": "",
-            "note_name": self.configs["default-note-name"].replace(".md", ""),
+            "note_name": self.notename_parts["note_name"],
         }
 
     def setup_ui(self):
@@ -61,29 +62,12 @@ class NoteCreator(QWidget):
         self.setup_subfolder_combo()
         self.setup_optional_subdir_lineedit()
 
-        self.layout_right.addWidget(QLabel("Pick a template:"))
-        self.layout_right.addLayout(self.layout_right_checkboxes)
         self.layout_right.addLayout(self.layout_right_textboxes)
-        self.setup_checkboxes(self.configs["templates-list"], "full-templates")
-        self.setup_checkboxes(
-            self.configs["templates-components-list"], "component-templates"
-        )
-
-        for template_path in self.configs["templates-list"]:
-            self.setup_text_widgets(
-                is_a_template="yes",
-                template_path=template_path,
-                contents=None,
-                name=None,
-            )
-
-        for template_path in self.configs["templates-components-list"]:
-            self.setup_text_widgets(
-                is_a_template="yes",
-                template_path=template_path,
-                contents=None,
-                name=None,
-            )
+        self.setup_template_checkboxes("templates", "Complete Templates")
+        self.setup_template_checkboxes("templates-components", "Component Templates")
+        self.layout_center.addWidget(self.widget_macros)
+        
+        self.setup_template_text_widgets()
             
         self.setup_text_widgets(is_a_template="no", template_path=None, contents="", name="parsed-properties")
 
@@ -109,6 +93,7 @@ class NoteCreator(QWidget):
         self.layout.addWidget(self.widget_left)
         self.layout.addWidget(self.widget_center)
         self.layout.addWidget(self.widget_right)
+        self.widget_center.setDisabled(True)
 
         self.setLayout(self.layout)
 
@@ -125,63 +110,30 @@ class NoteCreator(QWidget):
 
         self.widget_right = QWidget()
         self.widget_right.setMinimumWidth(700)
+        self.widget_right.setMinimumHeight(800)
         self.layout_right = QVBoxLayout()
         self.widget_right.setLayout(self.layout_right)
 
-        self.full_templates = QGroupBox("Complete Templates")
-        self.layout_full_templates = QVBoxLayout()
-        self.full_templates.setLayout(self.layout_full_templates)
-        self.layout_center.addWidget(self.full_templates)
-        self.full_templates.setStyleSheet(
-            "QGroupBox {"
-            "border: 2px solid #404040;"
-            "border-radius: 5px;"
-            "margin-top: 1ex;"
-            "} "
-            "QGroupBox::title {"
-            "subcontrol-origin: margin;"
-            "left: 10px;"
-            "padding: 0 3px 0 3px;"
-            "}"
-        )
-
-        self.component_templates = QGroupBox("Component Templates")
-        self.layout_component_templates = QVBoxLayout()
-        self.component_templates.setLayout(self.layout_component_templates)
-        self.layout_center.addWidget(self.component_templates)
-        self.component_templates.setStyleSheet(
-            "QGroupBox {"
-            "border: 2px solid #404040;"
-            "border-radius: 5px;"
-            "margin-top: 1ex;"
-            "} "
-            "QGroupBox::title {"
-            "subcontrol-origin: margin;"
-            "left: 10px;"
-            "padding: 0 3px 0 3px;"
-            "}"
-        )
-
-        self.filename_macros = QGroupBox("Filename Inserts")
-        self.layout_macros = QVBoxLayout()
-        self.filename_macros.setLayout(self.layout_macros)
-        self.layout_center.addWidget(self.filename_macros)
-        self.filename_macros.setStyleSheet(
-            "QGroupBox {"
-            "border: 2px solid #404040;"
-            "border-radius: 5px;"
-            "margin-top: 1ex;"
-            "} "
-            "QGroupBox::title {"
-            "subcontrol-origin: margin;"
-            "left: 10px;"
-            "padding: 0 3px 0 3px;"
-            "}"
-        )
-        self.layout_right_checkboxes = QVBoxLayout()
         self.layout_right_textboxes = QVBoxLayout()
 
         self.spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        
+        self.widget_macros = QGroupBox("Filename Macros")
+        self.layout_macros = QVBoxLayout()
+        self.widget_macros.setLayout(self.layout_macros)
+        self.widget_macros.setStyleSheet(
+            "QGroupBox {"
+            "border: 2px solid #404040;"
+            "border-radius: 5px;"
+            "margin-top: 1ex;"
+            "} "
+            "QGroupBox::title {"
+            "subcontrol-origin: margin;"
+            "left: 10px;"
+            "padding: 0 3px 0 3px;"
+            "}"
+        )
 
     def update_properties(self):
         content = ""
@@ -198,7 +150,10 @@ class NoteCreator(QWidget):
         properties_values.pop(4)
         properties_values.pop(3)
         properties_values.pop(0)
-        
+        properties_keys.append("created ")
+        properties_keys.append("modified")
+        properties_values.append('$= `dv.current().file.ctime.toFormat("f")`')
+        properties_values.append('`$= dv.current().file.mtime.toFormat("f")`')
         properties_dict = dict(zip(properties_keys, properties_values))
             
         content += "%%\n"
@@ -208,7 +163,16 @@ class NoteCreator(QWidget):
         content += "%%\n"
 
         widget = self.find_text_widget("parsed-properties")
-        widget.setText(content)
+        if widget:
+            # Find the QTextEdit within the QWidget
+            textEdit = widget.findChild(QTextEdit)
+            if textEdit:
+                textEdit.setText(content)
+                widget.setVisible(True)  # Make sure the container QWidget is visible
+            else:
+                print("QTextEdit not found inside QWidget")
+        else:
+            print("QWidget not found")
         
     def pick_file_to_import(self):
         target_file_path, _ = QFileDialog.getOpenFileName(
@@ -260,10 +224,17 @@ class NoteCreator(QWidget):
         self.setup_text_widgets(
             is_a_template="no",
             template_path=None,
-            contents=content.strip(),
+            contents=content,
             name="extracted_content",
         )
-
+        frontmatter_widget = self.find_text_widget("extracted_frontmatter")
+        comment_widget = self.find_text_widget("extracted_comments")
+        content_widget = self.find_text_widget("extracted_content")
+        # print(f"Content Widget: {content_widget.objectName()}")
+        self.triggered_text_widget_visibility_toggle(frontmatter_widget)
+        self.triggered_text_widget_visibility_toggle(comment_widget)
+        self.triggered_text_widget_visibility_toggle(content_widget)
+        
     def populate_combo(self, widget, data):
         for item in data:
             widget.addItem(item, item)
@@ -335,21 +306,30 @@ class NoteCreator(QWidget):
             self.triggered_filename_lineedit_edited
         )
 
-    def setup_checkboxes(self, template_list, purpose):
-        if purpose == "full-templates":
-            layout = self.layout_full_templates
-        elif purpose == "component-templates":
-            layout = self.layout_component_templates
+    def setup_template_checkboxes(self, template_key, label):
+        layout = QVBoxLayout()
+        group_box = QGroupBox(label)
+        group_box.setLayout(layout)
+        group_box.setStyleSheet(
+            "QGroupBox {"
+            "border: 2px solid #404040;"
+            "border-radius: 5px;"
+            "margin-top: 1ex;"
+            "} "
+            "QGroupBox::title {"
+            "subcontrol-origin: margin;"
+            "left: 10px;"
+            "padding: 0 3px 0 3px;"
+            "}"
+        )
+        self.layout_center.addWidget(group_box)
 
-        for i, item in enumerate(template_list):
-            text = item.split("/")[-1].replace(".md", "")
-            checkbox = QCheckBox(text)
-            if text == "Default_Contents":
-                checkbox.setChecked(True)
-            checkbox.stateChanged.connect(lambda: self.triggered_text_widget_visibility_toggle(None))
-            checkbox.setObjectName(text)
+        for template_name in self.templates[template_key]["names"]:
+            template_name = template_name.replace(".md", "")
+            checkbox = QCheckBox(template_name.replace("_", " ").title())
+            checkbox.stateChanged.connect(lambda checked, name=template_name: self.triggered_text_widget_visibility_toggle(checkbox))
+            checkbox.setObjectName(template_name)
             layout.addWidget(checkbox)
- 
         layout.addItem(self.spacer)
 
     def setup_text_widgets(self, is_a_template, template_path, contents, name):
@@ -357,7 +337,6 @@ class NoteCreator(QWidget):
             contents = ""
             with open(template_path, "r", encoding="utf-8") as file:
                 contents = file.read()
-            name = template_path.split("/")[-1].replace(".md", "")
 
         widget = QWidget(self)
         vbox = QVBoxLayout(widget)
@@ -398,12 +377,20 @@ class NoteCreator(QWidget):
         hbox.addLayout(btn_layout)
 
         widget.setObjectName(name)
-        if widget.objectName() == "Default_Contents":
-            textbox.setPlaceholderText("Note Contents")
-        else:
-            widget.setHidden(True)
+        widget.setHidden(True)
 
         self.layout_right_textboxes.addWidget(widget)
+
+    def setup_template_text_widgets(self):
+        for template_category in self.templates.values():
+            for template_name in template_category["names"]:
+                template_path = os.path.join(template_category["directory"], template_name)
+                self.setup_text_widgets(
+                    is_a_template="yes",
+                    template_path=template_path,
+                    contents=None,
+                    name=template_name.replace(".md", ""),
+                )
 
     def triggered_root_folder_index_changed(self, index):
         self.chosen_root_folder = self.root_combo.currentText()
@@ -416,6 +403,7 @@ class NoteCreator(QWidget):
         self.directories_combo.setHidden(False)
         self.directories_combo_label.setHidden(False)
         self.filename_lineedit.setDisabled(False)
+        self.widget_center.setDisabled(False)
 
     def triggered_directories_combo_index_changed(self, index):
         chosen_directory = self.directories_combo.currentText()
@@ -432,27 +420,28 @@ class NoteCreator(QWidget):
         self.optional_subdir_label.setHidden(False)
         self.optional_subdir_input.setHidden(False)
         self.create_button.setDisabled(False)
-        properties_widget = self.find_text_widget("parsed-properties")
-        self.triggered_text_widget_visibility_toggle(properties_widget)
-        
+
+        # Update properties content and visibility directly
+        self.update_properties()
+
     def triggered_subfolder_combo_index_changed(self, index):
         chosen_sub_directory = self.subfolder_combo.currentText()
         self.filename_parts["subfolder"] = chosen_sub_directory
         self.triggered_final_path_label_edited()
 
     def triggered_filename_lineedit_edited(self):
-        if self.filename_lineedit.text() != self.filename_parts["note_name"]:
-            print("No change")
-            sender = self.sender()
-            print(sender)
-            self.notename_parts["note_name"] = f"{self.filename_lineedit.text()}.md"
-            self.triggered_final_path_label_edited()
+        sender = self.sender()
+        sender_text = sender.text()
+        self.notename_parts["note_name"] = sender_text
+        self.parse_name_string()
+        self.triggered_final_path_label_edited()
 
     def parse_name_string(self):
         temp_str = ""
         for key, item in self.notename_parts.items():
             if item != "":
                 temp_str += item
+        self.filename_parts["note_name"] = ""
         self.filename_parts["note_name"] = temp_str.replace(" ", "_").replace(".md", "")
 
     def triggered_final_path_label_edited(self):
@@ -462,50 +451,71 @@ class NoteCreator(QWidget):
                 new_filename += value
             elif value != "":
                 new_filename += f"/{value}"
-        self.final_path_label.setText(new_filename.replace(" ", "_"))
-        if os.path.isfile(new_filename.replace(" ", "_")):
+        self.final_path_label.setText(new_filename.replace(" ", "_") + ".md")
+
+        if os.path.isfile(new_filename.replace(" ", "_") + ".md"):
             self.warning_label.setText("Warning! File exists!")
         else:
             self.warning_label.setText("")
-        self.update_properties()
+        if self.action == "Create Note":
+            self.update_properties()
 
     def triggered_optional_subdir_input_text_changed(self, text):
         self.filename_parts["optional_subdir"] = self.optional_subdir_input.text()
         self.triggered_final_path_label_edited()
 
     def triggered_filename_macro_checkboxes(self):
-        if self.checkbox_date.isChecked() == True:
+        print("\n")
+        if self.checkbox_date.isChecked():
             self.notename_parts["date"] = self.current_date
+            print("Checked")
         else:
             self.notename_parts["date"] = ""
-            self.notename_parts["note_name"] = self.notename_parts["note_name"].replace(
-                self.current_date, ""
-            )
+            print("Unchecked")
+        
+        self.filename_lineedit.textChanged.disconnect(self.triggered_filename_lineedit_edited)
 
         self.parse_name_string()
-        self.triggered_final_path_label_edited()
         self.filename_lineedit.setText(self.filename_parts["note_name"])
 
+        self.triggered_final_path_label_edited()
+        self.filename_lineedit.textChanged.connect(self.triggered_filename_lineedit_edited)
+
+        print(f"notename: {self.notename_parts['note_name']}")
+        print(f"filename: {self.filename_parts['note_name']}")
+        print(f"lineedit: {self.filename_lineedit.text()}")
+        print(f"label: {self.final_path_label.text()}")
+
     def find_text_widget(self, widget_name):
+        # print(f"self.layout_right_textboxes.count(): {self.layout_right_textboxes.count()}")
         for i in range(self.layout_right_textboxes.count()):
             item = self.layout_right_textboxes.itemAt(i)
-            widget = item.widget()
-            if widget.objectName() == widget_name:
-                return widget.findChild(widget_name)
+            if item is not None:
+                widget = item.widget()
+                if widget is not None:
+                    if widget.objectName() == widget_name:
+                        return widget
+        print(f"Widget {widget_name} not found")
+        return None
+
+    def move_text_widget(self, widget, up):
+        index = self.layout_right_textboxes.indexOf(widget)
+        if up and index > 0:
+            self.layout_right_textboxes.insertWidget(index - 1, widget)
+        elif not up and index < self.layout_right_textboxes.count() - 1:
+            self.layout_right_textboxes.insertWidget(index + 1, widget)
 
     def triggered_text_widget_visibility_toggle(self, widget):
         sender = self.sender()
-        if type(sender) != QPushButton:
-            if type(widget) != QTextEdit:
-                widget = self.find_text_widget(sender.objectName())
-            if type(widget) == QTextEdit:
-                print("\n", type(sender))
-                print(type(widget))
-                print(widget.objectName())
-                if widget.isHidden():
-                    widget.setHidden(False)
-                else:
-                    widget.setHidden(True)
+       
+        if type(widget) != QWidget:
+            widget = self.find_text_widget(sender.objectName())
+
+        if type(widget) == QWidget:
+            if widget.isHidden():
+                widget.setHidden(False)
+            else:
+                widget.setHidden(True)
 
     def on_create_button_clicked(self):
         new_file_content = ""

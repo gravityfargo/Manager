@@ -1,42 +1,58 @@
 import sys, json, os, requests
+import shutil
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
     QVBoxLayout,
     QPushButton,
     QApplication,
-    QMainWindow
+    QMainWindow,
 )
 import PDF_Processor, New_Note
+
 
 class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.noteCreatorWindows = []
         self.initVars()
-        self.create_dirs(self.directory_config_json, self.configs["root-dirs"], self.configs["vault_root_directory"])
+        self.create_dirs(
+            self.directory_config_json,
+            self.configs["root-dirs"],
+            self.configs["vault_root_directory"],
+        )
+        self.create_indexes(
+            self.directory_config_json,
+            self.configs["root-dirs"],
+            self.configs["vault_root_directory"],
+            self.templates,
+        )
         self.setWindowTitle("Obsidian Manager")
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
         self.layout = QVBoxLayout()
         self.centralWidget.setLayout(self.layout)
         self.setupUI()
-        
+
+        self.index_directory()
+
     def setupUI(self):
         self.createNoteButton = QPushButton("Create Note")
         self.createNoteButton.clicked.connect(self.launchCreateNote)
         self.layout.addWidget(self.createNoteButton)
-        
+
         self.importNoteButton = QPushButton("Import Note")
         self.importNoteButton.clicked.connect(self.launchImportNote)
         self.layout.addWidget(self.importNoteButton)
-        
+
         self.process_pdf_button = QPushButton("Process PDF")
         # self.process_pdf_button.clicked.connect(self.launchProcessPDF)
         self.layout.addWidget(self.process_pdf_button)
 
     def launchCreateNote(self):
-        noteCreator = New_Note.NoteCreator(self.configs, self.directory_config_json, "Create Note")
+        noteCreator = New_Note.NoteCreator(
+            self.configs, self.directory_config_json, self.templates, "Create Note"
+        )
         noteCreator.dataSent.connect(self.handleNoteCreatorData)
         noteCreator.show()
         self.noteCreatorWindows.append(noteCreator)
@@ -50,7 +66,9 @@ class HomeWindow(QMainWindow):
             self.post_request(data, self.post_headers)
 
     def launchImportNote(self):
-        self.noteImporter = New_Note.NoteCreator(self.configs, self.directory_config_json, "Import Note")
+        self.noteImporter = New_Note.NoteCreator(
+            self.configs, self.directory_config_json, "Import Note"
+        )
         self.noteImporter.show()
 
     def initVars(self):
@@ -62,13 +80,13 @@ class HomeWindow(QMainWindow):
             self.directory_config_json,
             self.default_inline_meta_json,
         ) = self.parse_data_from_md(manager_directory + "config/config.md")
+
         root_dirs = self.index_json_dirs(self.directory_config_json)
-        templates_list = []
-        templates_components_list = []
-        for template in primary_config_json["templates-list"]:
-            templates_list.append(manager_directory + "Templates/" + template + ".md")
-        for template in primary_config_json["templates-components-list"]:
-            templates_components_list.append(manager_directory + "Templates/" + template + ".md")
+        # ['Courses', 'Linux Reference']
+        self.templates = self.get_templates(manager_directory)
+
+        self.output_json_file = manager_directory + "directory_index.json"
+
         self.configs = {
             "vault_root_directory": vault_root_directory,
             "manager_directory": manager_directory,
@@ -79,29 +97,27 @@ class HomeWindow(QMainWindow):
             "rest-api-url": primary_config_json["rest-api-url"],
             "community-plugins-json": primary_config_json["rest-api-url"],
             "default-note-name": primary_config_json["default-note-name"],
-            "templates-list": templates_list,
-            "templates-components-list": templates_components_list,
             "root-dirs": root_dirs,
         }
         self.get_api_key()
         authorization = "Bearer " + self.configs["rest-api-key"]
         self.get_headers = {
             "accept": "application/json",
-            "Authorization": authorization
+            "Authorization": authorization,
         }
         self.post_headers = {
             "Content-Type": "application/json",
             "accept": "*/*",
-            "Authorization": authorization
-            }
-        
+            "Authorization": authorization,
+        }
+
         self.put_new_note_headers = {
             "accept": "application/json",
             "Content-Type": "text/markdown",
-            "Authorization": authorization
+            "Authorization": authorization,
         }
 
-    def get_request(self, url, headers=None, params=None):
+    def get_request(self, url, headers, params):
         try:
             response = requests.get(url, headers=headers, params=params)
             response.raise_for_status()
@@ -125,6 +141,7 @@ class HomeWindow(QMainWindow):
             data = data["content"]
             response = requests.put(url, data=data, headers=headers, verify=False)
             response.raise_for_status()
+            print(response.text)
         except requests.RequestException as e:
             print(f"An error occurred: {e}")
 
@@ -176,11 +193,129 @@ class HomeWindow(QMainWindow):
                         vault_root_dir + i + "/" + dir + "/" + subdir, exist_ok=True
                     )
 
+    def create_indexes(self, directory_config, root_dirs, vault_root, templates):
+        # Ensure paths end with a slash
+        vault_root = os.path.join(vault_root, "")
+
+        # Primary Index
+        primary_index_template_path = os.path.join(
+            templates["templates-required"]["directory"],
+            templates["templates-required"]["names"][0],
+        )
+        primary_index_dest_path = os.path.join(vault_root, "Index.md")
+        shutil.copyfile(primary_index_template_path, primary_index_dest_path)
+
+        # Secondary Indexes
+        for root_dir in root_dirs:
+            secondary_index_template_path = os.path.join(
+                templates["templates-required"]["directory"],
+                templates["templates-required"]["names"][1],
+            )
+            secondary_index_dest_path = os.path.join(vault_root, root_dir, "Index.md")
+            os.makedirs(os.path.dirname(secondary_index_dest_path), exist_ok=True)
+            shutil.copyfile(secondary_index_template_path, secondary_index_dest_path)
+
+            # Tertiary Indexes (Directly within each course directory)
+            if root_dir in directory_config:
+                for directory in directory_config[root_dir]["directories"]:
+                    tertiary_index_template_path = os.path.join(
+                        templates["templates-required"]["directory"],
+                        templates["templates-required"]["names"][2],
+                    )
+                    tertiary_index_dest_path = os.path.join(
+                        vault_root, root_dir, directory, "Index.md"
+                    )
+                    os.makedirs(
+                        os.path.dirname(tertiary_index_dest_path), exist_ok=True
+                    )
+                    shutil.copyfile(
+                        tertiary_index_template_path, tertiary_index_dest_path
+                    )
+
+                    # For each sub-directory within each course directory
+                    for subdir in directory_config[root_dir]["directories"][directory]:
+                        tertiary_index_dest_subdir_path = os.path.join(
+                            vault_root, root_dir, directory, subdir, "Index.md"
+                        )
+                        os.makedirs(
+                            os.path.dirname(tertiary_index_dest_subdir_path),
+                            exist_ok=True,
+                        )
+                        shutil.copyfile(
+                            tertiary_index_template_path,
+                            tertiary_index_dest_subdir_path,
+                        )
+
+    def index_directory(self):
+        path = self.configs["vault_root_directory"]
+        directory_index = {}
+        for root, dirs, files in os.walk(path, topdown=True):
+
+            dirs[:] = [d for d in dirs if not d.startswith(".") and d != "Manager"]
+
+            relative_path = os.path.relpath(root, path)
+            if relative_path == ".":
+                relative_path = ""
+
+            sub_index = {}
+            for d in dirs:
+                sub_index[d] = {}
+
+            filtered_files = [f for f in files if not f.startswith(".")]
+            if filtered_files:
+                sub_index["files"] = filtered_files
+
+            if relative_path:
+                parts = relative_path.split(os.sep)
+                temp = directory_index
+                for part in parts[:-1]:
+                    temp = temp.get(part, {})
+                temp[parts[-1]] = sub_index
+            else:
+                directory_index.update(sub_index)
+
+        self.save_index_to_json(directory_index, self.output_json_file)
+
+    def save_index_to_json(self, directory_index, output_file):
+        try:
+            with open(output_file, "w") as f:
+                json.dump(directory_index, f, indent=4)
+        except Exception as e:
+            print(f"Error saving directory index to {output_file}: {e}")
+
     def get_api_key(self):
         plugins_dir = self.configs["plugins_dir"]
         with open(f"{plugins_dir}/obsidian-local-rest-api/data.json", "r") as file:
             data = json.load(file)
         self.configs["rest-api-key"] = data["apiKey"]
+
+    def get_templates(self, manager_dir):
+        templates = {
+            "templates": {
+                "directory": manager_dir + "Templates/Complete/",
+                "names": [],
+            },
+            "templates-components": {
+                "directory": manager_dir + "Templates/Components/",
+                "names": [],
+            },
+            "templates-required": {
+                "directory": manager_dir + "Templates/Required/",
+                "names": [],
+            },
+        }
+
+        for template_type in templates.values():
+            directory_path = template_type["directory"]
+            if os.path.isdir(directory_path):  # Check if the directory exists
+                for filename in os.listdir(directory_path):
+                    file_path = os.path.join(directory_path, filename)
+                    if os.path.isfile(
+                        file_path
+                    ):  # Make sure it's a file, not a directory
+                        template_type["names"].append(filename)
+
+        return templates
 
     def closeEvent(self, event):
         # Close all NoteCreator instances
@@ -188,7 +323,7 @@ class HomeWindow(QMainWindow):
             noteCreator.close()
         super().closeEvent(event)
 
-    
+
 def main():
     app = QApplication(sys.argv)
     mainWindow = HomeWindow()

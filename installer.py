@@ -20,6 +20,7 @@ def main():
         "quickadd",
         "obsidian-local-rest-api",
         "cmdr",
+        "obsidian-tasks-plugin"
     ]
     
     commander_config = {
@@ -33,6 +34,8 @@ def main():
     checkForPlugins(community_plugins_config, required_plugins)
     links_setup(executable_dir, visible_executable_dir)
     modify_commander(plugins_dir, commander_config)
+    modify_rest_api(plugins_dir)
+    modify_obsidian_config(obsidian_dir)
 
 def checkForPlugins(community_plugins_config, required_plugins):
     if os.path.isfile(community_plugins_config):
@@ -84,7 +87,7 @@ def modify_rest_api(plugins_dir):
         with open(conf, 'r', encoding='utf-8') as file:
             data = json.load(file)
 
-        data["enableInsecureServer"] = True
+        data["enableInsecureServer"] = "true"
         
         with open(conf, 'w', encoding='utf-8') as file:
             json.dump(data, file, indent=4, ensure_ascii=False)
@@ -95,6 +98,30 @@ def modify_rest_api(plugins_dir):
     except Exception as e:
         print(f"An error occurred: {e}")
  
-     
+def modify_obsidian_config(obsidian_dir):
+    try:
+        conf = f"{obsidian_dir}/custom-config.json" 
+        if not os.path.exists(conf):
+            data = {}
+        else:
+            with open(conf, 'r', encoding='utf-8') as file:
+                data = json.load(file)
+        data.update({
+            "newFileLocation": "current",
+            "alwaysUpdateLinks": True,
+            "trashOption": "local",
+            "showInlineTitle": False
+        })
+        
+        with open(conf, 'w', encoding='utf-8') as file:
+            json.dump(data, file, indent=4, ensure_ascii=False)
+        
+        print("Obsidian custom configuration updated.")
+    except json.JSONDecodeError as e:
+        print(f"Error reading JSON from {conf}: {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
 if __name__ == "__main__":
     main()

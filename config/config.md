@@ -1,16 +1,6 @@
 ````json primary-config
 {
 	"rest-api-url": "http://127.0.0.1:27123",
-	"index-template": "Index",
-	"templates-components-list": [
-		"Default_Contents", 
-		"Default_Header", 
-		"Quicklinks"
-		],
-	"templates-list": [
-		"Index_Template", 
-		"Notes_Template"
-		],
 	"default-note-name": "Raw Note.md"
 }
 primary-config```
