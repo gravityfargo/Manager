@@ -160,8 +160,6 @@ class Note_Processor(QWidget):
         path = self.final_path_label.text().replace(path_split[-1], "")
         path_formatted = f"[[{path}Index]]"
         properties_values.append(path_formatted)
-
-        print(f"{properties_keys}\n{properties_values}")
         properties_dict = dict(zip(properties_keys, properties_values))
         content += "%%\n"
         for key, value in properties_dict.items():
@@ -467,9 +465,11 @@ class Note_Processor(QWidget):
         for key, value in self.filename_parts.items():
             if value != "" and key == "root":
                 new_filename += value
+            elif value != "" and key == "note_name":
+                new_filename += f'/{value.replace(" ", "_")}.md'
             elif value != "":
                 new_filename += f"/{value}"
-        self.final_path_label.setText(new_filename.replace(" ", "_") + ".md")
+        self.final_path_label.setText(new_filename)
 
         if os.path.isfile(self.final_path_label.text()):
             self.warning_label.setText("Warning! File exists!")
