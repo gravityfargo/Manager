@@ -14,10 +14,8 @@ def main():
     visible_executable_dir = f"{vault_dir}Manager"
 
     required_plugins = [
-        "templater-obsidian",
         "python-scripter",
         "dataview",
-        "quickadd",
         "obsidian-local-rest-api",
         "cmdr",
         "obsidian-tasks-plugin",
