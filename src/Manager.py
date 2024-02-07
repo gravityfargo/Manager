@@ -1,5 +1,4 @@
 import sys, json, os, requests
-from tkinter import N
 import shutil
 from PyQt5.QtWidgets import (
     QApplication,
