@@ -43,9 +43,10 @@ primary-config```
 			"category": "tab"
 		},
 		"directories": {
-			"networking": ["netplan"],
+			"SSH": [""],
 			"System Manager": ["systemd", "initd"],
-			"Resource Manager": ["cgroups"]
+			"Resource Manager": ["cgroups"],
+			"git": ["configuration", "repository"]
 		}
 	},
 	"ARCSIM": {
